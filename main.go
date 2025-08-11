@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"inkline/internal/auth"
-	"inkline/internal/database"
+	"livescribble/internal/auth"
+	"livescribble/internal/database"
 	"log"
 	"log/slog"
 	"net/http"

@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"inkline/internal/utils"
+	"livescribble/internal/utils"
 	"net/http"
 	"strings"
 

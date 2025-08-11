@@ -2,7 +2,7 @@ package database
 
 import (
 	"fmt"
-	"inkline/internal/utils"
+	"livescribble/internal/utils"
 	"os"
 
 	"gorm.io/driver/postgres"

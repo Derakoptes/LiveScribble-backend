@@ -3,7 +3,7 @@ package auth
 import (
 	"encoding/json"
 	"errors"
-	"inkline/internal/utils"
+	"livescribble/internal/utils"
 	"log/slog"
 	"net/http"
 	"time"
