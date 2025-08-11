@@ -10,7 +10,7 @@ type User struct {
 
 type Document struct {
 	ID      string    `gorm:"primary_key;not null;unique" json:"id"`
-	Admin   []string  `gorm:"type:jsonb;not null" json:"admin"`
+	UserID  string    `gorm:"type:jsonb;not null" json:"user_id"`
 	Content string    `gorm:"type:text;not null" json:"content"`
 	Updated time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"updated"`
 	Created time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"created"`
