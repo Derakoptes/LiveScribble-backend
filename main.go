@@ -74,7 +74,7 @@ func main() {
 		errorLogger.Error(fmt.Sprintf("error pinging redis: %v", err.Error()))
 		log.Fatalf("%s", fmt.Sprintf("error pinging redis: %v", err.Error()))
 	}
-
+	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 
 	authHandler := auth.NewHandler(db.DB, []byte(jwt), errorLogger)
