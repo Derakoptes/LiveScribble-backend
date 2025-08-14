@@ -1,12 +1,17 @@
 package room
 
 import (
+	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"encoding/json"
 	"livescribble/internal/utils"
 	"log/slog"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
@@ -19,27 +24,46 @@ const (
 
 	FrameSnapshotUpdateFailed  = 0x21 //Snapshot update failed
 	FrameSnapshotUpdateSuccess = 0x22 //Snapshot update success
-
 )
+
+type RedisMessage struct {
+	Type     string `json:"type"`
+	DocId    string `json:"docId"`
+	Data     []byte `json:"data"`
+	SenderId string `json:"senderId"` // connection ID to avoid echo
+}
 
 type Room struct {
 	logger *slog.Logger
 
 	docId string
 
-	db       *gorm.DB
-	clients  map[*websocket.Conn]bool
+	db          *gorm.DB
+	redisClient *redis.Client
+	ctx         context.Context
+	cancelRedis context.CancelFunc
+
+	clients  map[*websocket.Conn]string // map connection to connection ID
 	clientMu sync.RWMutex
 
 	onEmpty func(string)
 }
 
-func NewRoom(docId string, db *gorm.DB) *Room {
-	return &Room{
-		docId:   docId,
-		db:      db,
-		clients: make(map[*websocket.Conn]bool),
+func NewRoom(docId string, db *gorm.DB, redisClient *redis.Client) *Room {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	r := &Room{
+		docId:       docId,
+		db:          db,
+		redisClient: redisClient,
+		ctx:         ctx,
+		cancelRedis: cancel,
+		clients:     make(map[*websocket.Conn]string),
 	}
+
+	go r.subscribeToRedis()
+
+	return r
 }
 
 func (r *Room) SetOnEmptyCallback(callback func(string)) {
@@ -48,7 +72,8 @@ func (r *Room) SetOnEmptyCallback(callback func(string)) {
 
 func (r *Room) AddClient(c *websocket.Conn) {
 	r.clientMu.Lock()
-	r.clients[c] = true
+	connId := generateConnectionId()
+	r.clients[c] = connId
 	r.clientMu.Unlock()
 
 	r.listenToClient(c)
@@ -58,6 +83,8 @@ func (r *Room) listenToClient(c *websocket.Conn) {
 	defer func() {
 		r.removeClient(c)
 	}()
+
+	connId := r.clients[c]
 
 	for {
 		msgType, data, err := c.ReadMessage()
@@ -69,6 +96,8 @@ func (r *Room) listenToClient(c *websocket.Conn) {
 		}
 		if msgType == websocket.BinaryMessage || msgType == websocket.TextMessage {
 			r.broadcastLocal(data, c)
+
+			r.broadcastToRedis(data, connId)
 
 			if len(data) > 0 && data[0] == FrameSnapshot {
 				payload := data[1:]
@@ -127,9 +156,90 @@ func (r *Room) removeClient(c *websocket.Conn) {
 	delete(r.clients, c)
 	_ = c.Close()
 
-	if len(r.clients) == 0 && r.onEmpty != nil {
-		go r.onEmpty(r.docId)
+	if len(r.clients) == 0 {
+		// Cancel Redis subscription when room is empty
+		r.cancelRedis()
+
+		if r.onEmpty != nil {
+			go r.onEmpty(r.docId)
+		}
 	}
 
 	r.clientMu.Unlock()
+}
+
+func generateConnectionId() string {
+	bytes := make([]byte, 8)
+	rand.Read(bytes)
+	return hex.EncodeToString(bytes)
+}
+
+func (r *Room) broadcastToRedis(data []byte, senderConnId string) {
+	msg := RedisMessage{
+		Type:     "broadcast",
+		DocId:    r.docId,
+		Data:     data,
+		SenderId: senderConnId,
+	}
+
+	msgBytes, err := json.Marshal(msg)
+	if err != nil {
+		r.logger.Error("Failed to marshal Redis message", "error", err)
+		return
+	}
+
+	channel := "room:" + r.docId
+	if err := r.redisClient.Publish(r.ctx, channel, msgBytes).Err(); err != nil {
+		r.logger.Error("Failed to publish to Redis", "error", err)
+	}
+}
+
+func (r *Room) subscribeToRedis() {
+	channel := "room:" + r.docId
+	pubsub := r.redisClient.Subscribe(r.ctx, channel)
+	defer pubsub.Close()
+
+	ch := pubsub.Channel()
+
+	for {
+		select {
+		case msg := <-ch:
+			var redisMsg RedisMessage
+			if err := json.Unmarshal([]byte(msg.Payload), &redisMsg); err != nil {
+				r.logger.Error("Failed to unmarshal Redis message", "error", err)
+				continue
+			}
+
+			// Don't broadcast back to local clients if this server sent it
+			if redisMsg.Type == "broadcast" && r.isLocalSender(redisMsg.SenderId){
+				r.broadcastFromRedis(redisMsg.Data)
+			}
+
+		case <-r.ctx.Done():
+			return
+		}
+	}
+}
+
+func (r *Room) isLocalSender(senderId string) bool {
+    r.clientMu.RLock()
+    defer r.clientMu.RUnlock()
+    
+    for _, connId := range r.clients {
+        if connId == senderId {
+            return true
+        }
+    }
+    return false
+}
+func (r *Room) broadcastFromRedis(data []byte) {
+	r.clientMu.RLock()
+	defer r.clientMu.RUnlock()
+
+	for c := range r.clients {
+		_ = c.SetWriteDeadline(time.Now().Add(time.Second * 5))
+		if err := c.WriteMessage(websocket.BinaryMessage, data); err != nil {
+			go r.removeClient(c)
+		}
+	}
 }

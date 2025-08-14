@@ -6,21 +6,24 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
 type RoomManager struct {
-	logger *slog.Logger
-	db     *gorm.DB
-	rooms  map[string]*Room
-	roomMu sync.RWMutex
+	logger      *slog.Logger
+	db          *gorm.DB
+	redisClient *redis.Client
+	rooms       map[string]*Room
+	roomMu      sync.RWMutex
 }
 
-func NewRoomManager(db *gorm.DB, logger *slog.Logger) *RoomManager {
+func NewRoomManager(db *gorm.DB, logger *slog.Logger, redisClient *redis.Client) *RoomManager {
 	rm := &RoomManager{
-		logger: logger,
-		db:     db,
-		rooms:  make(map[string]*Room),
+		logger:      logger,
+		db:          db,
+		redisClient: redisClient,
+		rooms:       make(map[string]*Room),
 	}
 
 	go rm.startPeriodicSnapshotRequests()
@@ -34,7 +37,7 @@ func (rm *RoomManager) JoinRoom(docId string, conn *websocket.Conn) {
 
 	room, exists := rm.rooms[docId]
 	if !exists {
-		room = NewRoom(docId, rm.db)
+		room = NewRoom(docId, rm.db, rm.redisClient)
 		room.logger = rm.logger
 		room.SetOnEmptyCallback(rm.RemoveRoom)
 		rm.rooms[docId] = room

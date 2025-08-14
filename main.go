@@ -80,7 +80,7 @@ func main() {
 	authHandler := auth.NewHandler(db.DB, []byte(jwt), errorLogger)
 
 	// Initialize room manager
-	roomManager := room.NewRoomManager(db.DB, errorLogger)
+	roomManager := room.NewRoomManager(db.DB, errorLogger, redisClient)
 
 	r.POST("/login", authHandler.Login)
 	r.POST("/register", authHandler.Register)
@@ -176,7 +176,6 @@ func main() {
 				return
 			}
 
-			// Join the document room
 			roomManager.JoinRoom(docId, conn)
 		})
 	}
