@@ -77,7 +77,7 @@ func (h *Handler) Login(ctx *gin.Context) {
 	//Password and Email Correct
 	token, err := createToken(user.ID, h.jwtKey)
 	if err != nil {
-		h.logger.Error("Failed to create token", err)
+		h.logger.Error("Failed to create token", "error", err.Error())
 		ctx.JSON(
 			http.StatusInternalServerError,
 			gin.H{"message": "Server error"},
@@ -113,7 +113,7 @@ func (h *Handler) Register(ctx *gin.Context) {
 	//user doesnt exist, create
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		h.logger.Error("Failed to hash password", err)
+		h.logger.Error("Failed to hash password", "error",err)
 		ctx.JSON(
 			http.StatusInternalServerError,
 			gin.H{"message": "Server error"},
@@ -122,7 +122,7 @@ func (h *Handler) Register(ctx *gin.Context) {
 	}
 	userID, err := generateUserID()
 	if err != nil {
-		h.logger.Error("Failed to generate user id", err)
+		h.logger.Error("Failed to generate user id","error", err)
 		ctx.JSON(
 			http.StatusInternalServerError,
 			gin.H{"message": "Server error"},
@@ -136,7 +136,7 @@ func (h *Handler) Register(ctx *gin.Context) {
 	}
 	err = h.db.Create(&newUser).Error
 	if err != nil {
-		h.logger.Error("Failed to save user", err)
+		h.logger.Error("Failed to save user","error", err.Error())
 		ctx.JSON(
 			http.StatusInternalServerError,
 			gin.H{"message": "Server error"},
@@ -145,7 +145,7 @@ func (h *Handler) Register(ctx *gin.Context) {
 	}
 	token, err := createToken(newUser.ID, h.jwtKey)
 	if err != nil {
-		h.logger.Error("Failed to generate access token", err)
+		h.logger.Error("Failed to generate access token ","error", err.Error())
 		ctx.JSON(
 			http.StatusInternalServerError,
 			gin.H{"message": "Server error"},
