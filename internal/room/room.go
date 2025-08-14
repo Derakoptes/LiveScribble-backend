@@ -102,7 +102,7 @@ func (r *Room) listenToClient(c *websocket.Conn) {
 			if len(data) > 0 && data[0] == FrameSnapshot {
 				payload := data[1:]
 				if err := r.saveSnapshot(payload); err != nil {
-					r.logger.Error("saving snapshot failed", "error", r.docId)
+        			r.logger.Error("Failed to save snapshot", "docId", r.docId, "error", err, "payloadSize", len(payload))
 					errorMsg := []byte{FrameSnapshotUpdateFailed}
 					r.broadcastToSingle(errorMsg, c)
 					//in the frontend, ensure you await this message upon saving, to ensure that it has saved or not, also account for user spammign the save
@@ -153,6 +153,7 @@ func (r *Room) saveSnapshot(payload []byte) error {
 
 func (r *Room) removeClient(c *websocket.Conn) {
 	r.clientMu.Lock()
+	defer r.clientMu.Unlock()
 	delete(r.clients, c)
 	_ = c.Close()
 
@@ -164,8 +165,6 @@ func (r *Room) removeClient(c *websocket.Conn) {
 			go r.onEmpty(r.docId)
 		}
 	}
-
-	r.clientMu.Unlock()
 }
 
 func generateConnectionId() string {
@@ -211,7 +210,7 @@ func (r *Room) subscribeToRedis() {
 			}
 
 			// Don't broadcast back to local clients if this server sent it
-			if redisMsg.Type == "broadcast" && r.isLocalSender(redisMsg.SenderId){
+			if redisMsg.Type == "broadcast" && !r.isLocalSender(redisMsg.SenderId){
 				r.broadcastFromRedis(redisMsg.Data)
 			}
 
