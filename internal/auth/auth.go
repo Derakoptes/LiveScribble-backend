@@ -75,7 +75,7 @@ func (h *Handler) Login(ctx *gin.Context) {
 	}
 
 	//Password and Email Correct
-	token, err := createToken(user.ID, h.jwtKey)
+	token, err := createToken(user.ID, h.jwtKey, 7)
 	if err != nil {
 		h.logger.Error("Failed to create token", "error", err.Error())
 		ctx.JSON(
@@ -87,6 +87,60 @@ func (h *Handler) Login(ctx *gin.Context) {
 	ctx.JSON(
 		http.StatusOK,
 		gin.H{"token": token},
+	)
+}
+
+func (h *Handler) CreateTempUser(ctx *gin.Context) {
+	tempID, err := generateTempID()
+	if err != nil {
+		h.logger.Error("Failed to generate temp user id", "error", err)
+		ctx.JSON(
+			http.StatusInternalServerError,
+			gin.H{"message": "Server error"},
+		)
+		return
+	}
+
+	// Add "temp" prefix to the ID
+	tempUserID := "temp" + tempID
+
+	// Set deleted_at to 1 day from now
+	deletedAt := time.Now().Add(24 * time.Hour)
+
+	tempUser := utils.User{
+		ID:        tempUserID,
+		Email:     "", // Empty email for temp users
+		Password:  "", // Empty password for temp users
+		DeletedAt: deletedAt,
+	}
+
+	err = h.db.Create(&tempUser).Error
+	if err != nil {
+		h.logger.Error("Failed to create temp user", "error", err.Error())
+		ctx.JSON(
+			http.StatusInternalServerError,
+			gin.H{"message": "Server error"},
+		)
+		return
+	}
+
+	// Create token that lasts 1 day
+	token, err := createToken(tempUser.ID, h.jwtKey, 1)
+	if err != nil {
+		h.logger.Error("Failed to create token for temp user", "error", err.Error())
+		ctx.JSON(
+			http.StatusInternalServerError,
+			gin.H{"message": "Server error"},
+		)
+		return
+	}
+
+	ctx.JSON(
+		http.StatusOK,
+		gin.H{
+			"token":  token,
+			"tempId": tempUser.ID,
+		},
 	)
 }
 
@@ -113,7 +167,7 @@ func (h *Handler) Register(ctx *gin.Context) {
 	//user doesnt exist, create
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		h.logger.Error("Failed to hash password", "error",err)
+		h.logger.Error("Failed to hash password", "error", err)
 		ctx.JSON(
 			http.StatusInternalServerError,
 			gin.H{"message": "Server error"},
@@ -122,7 +176,7 @@ func (h *Handler) Register(ctx *gin.Context) {
 	}
 	userID, err := generateUserID()
 	if err != nil {
-		h.logger.Error("Failed to generate user id","error", err)
+		h.logger.Error("Failed to generate user id", "error", err)
 		ctx.JSON(
 			http.StatusInternalServerError,
 			gin.H{"message": "Server error"},
@@ -136,16 +190,16 @@ func (h *Handler) Register(ctx *gin.Context) {
 	}
 	err = h.db.Create(&newUser).Error
 	if err != nil {
-		h.logger.Error("Failed to save user","error", err.Error())
+		h.logger.Error("Failed to save user", "error", err.Error())
 		ctx.JSON(
 			http.StatusInternalServerError,
 			gin.H{"message": "Server error"},
 		)
 		return
 	}
-	token, err := createToken(newUser.ID, h.jwtKey)
+	token, err := createToken(newUser.ID, h.jwtKey, 7)
 	if err != nil {
-		h.logger.Error("Failed to generate access token ","error", err.Error())
+		h.logger.Error("Failed to generate access token ", "error", err.Error())
 		ctx.JSON(
 			http.StatusInternalServerError,
 			gin.H{"message": "Server error"},
@@ -158,11 +212,11 @@ func (h *Handler) Register(ctx *gin.Context) {
 	)
 }
 
-func createToken(id string, secretKey []byte) (string, error) {
+func createToken(id string, secretKey []byte, duration int) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
 		ID: id,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24 * 7)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24 * time.Duration(duration))),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	})
@@ -174,5 +228,9 @@ func createToken(id string, secretKey []byte) (string, error) {
 }
 
 func generateUserID() (string, error) {
-	return utils.RandomString(16)
+	return utils.RandomString(10)
+}
+
+func generateTempID() (string, error) {
+	return utils.RandomString(6)
 }

@@ -6,6 +6,7 @@ type User struct {
 	ID       string `gorm:"primary_key;not null;unique" json:"id"`
 	Email    string `gorm:"not null;unique" json:"email"`
 	Password string `gorm:"not null" json:"password"`
+	DeletedAt time.Time `gorm:"default:null" json:"deleted_at"`
 }
 
 type Document struct {

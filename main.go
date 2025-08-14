@@ -34,9 +34,15 @@ func main() {
 
 	errorLogger := slog.New(slog.NewTextHandler(logFile, nil))
 
+	var enableTempUser bool
+	if os.Getenv("enable_temp_user") == "true" {
+		enableTempUser = true
+	} else {
+		enableTempUser = false
+	}
 	// WebSocket upgrader
 	upgrader := websocket.Upgrader{
-		ReadBufferSize: 1024,
+		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
 		CheckOrigin: func(r *http.Request) bool {
 			return true //TODO:restrict
@@ -86,6 +92,9 @@ func main() {
 
 	r.POST("/login", authHandler.Login)
 	r.POST("/register", authHandler.Register)
+	if enableTempUser {
+		r.POST("/newtempuser", authHandler.CreateTempUser)
+	}
 	r.GET("/health", func(context *gin.Context) {
 		context.JSON(http.StatusOK, gin.H{})
 	})
@@ -113,7 +122,26 @@ func main() {
 				"document": document,
 			})
 		})
-
+		protected.GET("/documents", func(ctx *gin.Context) {
+			currentUser := ctx.GetString("current_user")
+			var document []utils.Document
+			err := db.DB.Where("user_id = ? OR ? = ANY(access)", currentUser, currentUser).Find(&document).Error
+			if err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					ctx.JSON(http.StatusNotFound, gin.H{
+						"message": "document not found",
+					})
+				} else {
+					ctx.JSON(http.StatusInternalServerError, gin.H{
+						"message": "error retrieving document",
+					})
+				}
+				return
+			}
+			ctx.JSON(http.StatusOK, gin.H{
+				"document": document,
+			})
+		})
 		// Create a new document
 		protected.POST("/document", func(ctx *gin.Context) {
 			currentUser := ctx.GetString("current_user")
