@@ -35,7 +35,7 @@ func main() {
 	errorLogger := slog.New(slog.NewTextHandler(logFile, nil))
 
 	var enableTempUser bool
-	if os.Getenv("enable_temp_user") == "true" {
+	if os.Getenv("ENABLE_TEMP_USER") == "true" {
 		enableTempUser = true
 	} else {
 		enableTempUser = false
@@ -90,15 +90,16 @@ func main() {
 	// Initialize room manager
 	roomManager := room.NewRoomManager(db.DB, errorLogger, redisClient)
 
-	r.POST("/login", authHandler.Login)
-	r.POST("/register", authHandler.Register)
+	r.Use(auth.CORSMiddleware()).POST("/login", authHandler.Login)
+	r.Use(auth.CORSMiddleware()).POST("/register", authHandler.Register)
 	if enableTempUser {
-		r.POST("/newtempuser", authHandler.CreateTempUser)
+		r.Use(auth.CORSMiddleware()).POST("/newtempuser", authHandler.CreateTempUser)
 	}
 	r.GET("/health", func(context *gin.Context) {
 		context.JSON(http.StatusOK, gin.H{})
 	})
 	protected := r.Group("/protected")
+	protected.Use(auth.CORSMiddleware())
 	protected.Use(auth.MiddleWare([]byte(jwt), db.DB))
 	{
 		protected.GET("/document/:doc_id", func(ctx *gin.Context) {
