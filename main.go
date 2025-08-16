@@ -143,7 +143,7 @@ func main() {
 			})
 		})
 		// Create a new document
-		protected.POST("/document", func(ctx *gin.Context) {
+		protected.POST("/create-document", func(ctx *gin.Context) {
 			currentUser := ctx.GetString("current_user")
 
 			new_document_id, err := generateDocumentId()
@@ -172,7 +172,27 @@ func main() {
 				"document": document,
 			})
 		})
+		protected.POST("delete-document", func(ctx *gin.Context) {
+			currentUser := ctx.GetString("current_user")
+			document_id := ctx.PostForm("document_id")
 
+			err := db.DB.Where("id = ? AND user_id",&document_id, &currentUser).Delete(&utils.Document{}).Error
+			if err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					ctx.JSON(http.StatusOK, gin.H{
+						"message": "cannot Find Document",
+					})
+				} else {
+					ctx.JSON(http.StatusOK, gin.H{
+						"message": "error deleting document",
+					})
+				}
+				return
+			}
+			ctx.JSON(http.StatusOK, gin.H{
+				"message": "document deleted successfully",
+			})
+		})
 		protected.GET("/ws/:doc_id", func(ctx *gin.Context) {
 			docId := ctx.Param("doc_id")
 			currentUser := ctx.GetString("current_user")
