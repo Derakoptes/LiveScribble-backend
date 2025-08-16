@@ -25,7 +25,7 @@ func NewRedisClient() (*redis.Client, error) {
 	}
 	Password := os.Getenv("REDIS_PW")
 	if Password == "" {
-		return nil, fmt.Errorf("REDIS_PW environment variable not set")
+		fmt.Printf("REDIS_PW environment variable not set")
 	}
 	DB, err := strconv.Atoi(os.Getenv("REDIS_DB"))
 	if err != nil {
