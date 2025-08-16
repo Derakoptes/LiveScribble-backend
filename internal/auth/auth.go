@@ -91,6 +91,16 @@ func (h *Handler) Login(ctx *gin.Context) {
 }
 
 func (h *Handler) CreateTempUser(ctx *gin.Context) {
+	var req Request
+	err := json.Unmarshal([]byte(ctx.PostForm("request")), &req)
+	if err != nil {
+		ctx.JSON(
+			http.StatusBadRequest,
+			gin.H{"message": "Missing Request"},
+		)
+		return
+	}
+
 	tempID, err := generateTempID()
 	if err != nil {
 		h.logger.Error("Failed to generate temp user id", "error", err)
@@ -110,7 +120,7 @@ func (h *Handler) CreateTempUser(ctx *gin.Context) {
 	tempUser := utils.User{
 		ID:        tempUserID,
 		Email:     "", // Empty email for temp users
-		Password:  "", // Empty password for temp users
+		Password:  req.Password,
 		DeletedAt: deletedAt,
 	}
 
