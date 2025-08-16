@@ -84,22 +84,21 @@ func main() {
 	}
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
-
+	r.Use(auth.CORSMiddleware())
 	authHandler := auth.NewHandler(db.DB, []byte(jwt), errorLogger)
 
 	// Initialize room manager
 	roomManager := room.NewRoomManager(db.DB, errorLogger, redisClient)
 
-	r.Use(auth.CORSMiddleware()).POST("/login", authHandler.Login)
-	r.Use(auth.CORSMiddleware()).POST("/register", authHandler.Register)
+	r.POST("/login", authHandler.Login)
+	r.POST("/register", authHandler.Register)
 	if enableTempUser {
-		r.Use(auth.CORSMiddleware()).POST("/newtempuser", authHandler.CreateTempUser)
+		r.POST("/newtempuser", authHandler.CreateTempUser)
 	}
 	r.GET("/health", func(context *gin.Context) {
 		context.JSON(http.StatusOK, gin.H{})
 	})
 	protected := r.Group("/protected")
-	protected.Use(auth.CORSMiddleware())
 	protected.Use(auth.MiddleWare([]byte(jwt), db.DB))
 	{
 		protected.GET("/document/:doc_id", func(ctx *gin.Context) {
