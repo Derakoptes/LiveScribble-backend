@@ -35,7 +35,7 @@ The backend uses a **framed WebSocket protocol**:
 - **Go** – backend language  
 - **Gin** – HTTP router for REST endpoints  
 - **Gorilla WebSocket** – real-time collaboration  
-- **Redis)** – Pub/Sub for horizontal scaling (not yet integrated)
+- **Redis** – Pub/Sub for horizontal scaling
 
 ---
 
