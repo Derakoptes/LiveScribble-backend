@@ -5,10 +5,10 @@ This repository contains the **backend service**, written in Go.
 
 ---
 
-## 🚀 Features (Current Stage)
+## 🚀 Features
 
 - **User Authentication** – basic auth layer implemented.  
-- **Document Fetching (REST)** – retrieve all documents or retrieve a document by ID.  
+- **Document Fetching and Management (REST)** – Manage a single or all document using REST calls.  
 - **WebSocket Collaboration** – upgrade connections to WebSocket for real-time sync.  
 - **Event Frames** – structured binary/JSON messages for CRDT updates and presence.
 
