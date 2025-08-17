@@ -117,7 +117,7 @@ func main() {
 			requestedDocId := ctx.Param("doc_id")
 			currentUser := ctx.GetString("current_user")
 			var document utils.Document
-			err := db.DB.Where("id = ?", requestedDocId).First(&document).Error
+			err := db.DB.Model(utils.Document{}).Where("id = ?", requestedDocId).First(&document).Error
 			if err != nil || (document.UserID != currentUser && !containsKeyword(document.Access, currentUser)) {
 				if errors.Is(err, gorm.ErrRecordNotFound) {
 					ctx.JSON(http.StatusNotFound, gin.H{
@@ -137,7 +137,7 @@ func main() {
 		protected.GET("/documents", func(ctx *gin.Context) {
 			currentUser := ctx.GetString("current_user")
 			var document []utils.Document
-			err := db.DB.Where("user_id = ? OR ? = ANY(access)", currentUser, currentUser).Find(&document).Error
+			err := db.DB.Model(utils.Document{}).Where("user_id = ? OR ? = ANY(access)", currentUser, currentUser).Find(&document).Error
 			if err != nil {
 				if errors.Is(err, gorm.ErrRecordNotFound) {
 					ctx.JSON(http.StatusNotFound, gin.H{
@@ -188,7 +188,7 @@ func main() {
 			currentUser := ctx.GetString("current_user")
 			document_id := ctx.PostForm("document_id")
 
-			err := db.DB.Where("id = ? AND user_id", &document_id, &currentUser).Delete(&utils.Document{}).Error
+			err := db.DB.Model(utils.User{}).Where("id = ? AND user_id", &document_id, &currentUser).Delete(&utils.Document{}).Error
 			if err != nil {
 				if errors.Is(err, gorm.ErrRecordNotFound) {
 					ctx.JSON(http.StatusOK, gin.H{
@@ -217,7 +217,7 @@ func main() {
 			}
 			// Verify user has access to the document
 			var document utils.Document
-			err := db.DB.Where("id = ?", docId).First(&document).Error
+			err := db.DB.Model(utils.Document{}).Where("id = ?", docId).First(&document).Error
 			if err != nil || (document.UserID != currentUser && !containsKeyword(document.Access, currentUser)) {
 				if errors.Is(err, gorm.ErrRecordNotFound) {
 					ctx.JSON(http.StatusNotFound, gin.H{

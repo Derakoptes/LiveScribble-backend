@@ -49,7 +49,7 @@ func (h *Handler) Login(ctx *gin.Context) {
 	}
 
 	var user utils.User
-	err = h.db.Where("email = ?", req.Email).Error
+	err = h.db.Model(utils.User{}).Where("email = ?", req.Email).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			ctx.JSON(
@@ -180,7 +180,7 @@ func (h *Handler) Register(ctx *gin.Context) {
 	}
 
 	var checkUser utils.User
-	err = h.db.Where("email = ?", req.Email).First(&checkUser).Error
+	err = h.db.Model(utils.User{}).Where("email = ?", req.Email).First(&checkUser).Error
 	if err == nil {
 		ctx.JSON(
 			http.StatusBadRequest,

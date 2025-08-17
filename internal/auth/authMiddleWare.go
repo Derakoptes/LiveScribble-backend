@@ -3,7 +3,6 @@ package auth
 import (
 	"livescribble/internal/utils"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -38,7 +37,7 @@ func MiddleWare(jwtKey []byte, DB *gorm.DB) gin.HandlerFunc {
 			ctx.Abort()
 		}
 		var user utils.User
-		err = DB.Where("id = ?", strings.ToLower(claims.ID)).First(&user).Error
+		err = DB.Model(utils.User{}).Where("id = ?", claims.ID).First(&user).Error
 		if err != nil {
 			ctx.JSON(
 				http.StatusUnauthorized, gin.H{
