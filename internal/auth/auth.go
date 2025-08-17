@@ -114,13 +114,24 @@ func (h *Handler) CreateTempUser(ctx *gin.Context) {
 	// Add "temp" prefix to the ID
 	tempUserID := "temp" + tempID
 
+	// Hash the password before storing
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		h.logger.Error("Failed to hash password", "error", err)
+		ctx.JSON(
+			http.StatusInternalServerError,
+			gin.H{"message": "Server error"},
+		)
+		return
+	}
+
 	// Set deleted_at to 1 day from now
 	deletedAt := time.Now().Add(24 * time.Hour)
 
 	tempUser := utils.User{
 		ID:        tempUserID,
 		Email:     "", // Empty email for temp users
-		Password:  req.Password,
+		Password:  string(hashedPassword),
 		DeletedAt: deletedAt,
 	}
 
