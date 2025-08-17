@@ -23,11 +23,6 @@ func (dbm *Manager) Connect() error {
 	if dsn == "" {
 		return fmt.Errorf("DATABASE_URL environment variable not set")
 	}
-	password := os.Getenv("DB_PASSWORD")
-	if password == "" {
-		return fmt.Errorf("DB_PASSWORD environment variable not set")
-	}
-
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),
 	})
