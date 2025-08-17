@@ -28,7 +28,7 @@ func CORSMiddleware() gin.HandlerFunc {
 
 		var originAllowed bool
 		if allowAllOrigins {
-			c.Header("Access-Control-Allow-Origin", "*")
+			c.Header("Access-Control-Allow-Origin", origin)
 			originAllowed = true
 		} else if len(allowedOrigins) > 0 && slices.Contains(allowedOrigins, origin) {
 			c.Header("Access-Control-Allow-Origin", origin)
