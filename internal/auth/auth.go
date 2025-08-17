@@ -262,15 +262,13 @@ func generateTempID() (string, error) {
 }
 
 func (h *Handler) setCookie(ctx *gin.Context, token string, maxAge time.Duration) {
-	ctx.SetSameSite(http.SameSiteNoneMode)
 	ctx.SetCookie(
 		"auth_token",          
 		token,                 
 		int(maxAge.Seconds()), 
 		"/",                   
 		"",                    
-		false,                 
+		true,                 
 		true,                 	
 	)
 }
-//TODO:change above
