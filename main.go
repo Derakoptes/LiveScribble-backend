@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"livescribble/internal/auth"
 	"livescribble/internal/database"
 	"livescribble/internal/room"
@@ -32,7 +33,8 @@ func main() {
 		}
 	}(logFile)
 
-	errorLogger := slog.New(slog.NewTextHandler(logFile, nil))
+	multiWriter := io.MultiWriter(logFile, os.Stdout)
+	errorLogger := slog.New(slog.NewTextHandler(multiWriter, nil))
 
 	var enableTempUser bool
 	if os.Getenv("ENABLE_TEMP_USER") == "true" {
