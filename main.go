@@ -137,7 +137,7 @@ func main() {
 		protected.GET("/documents", func(ctx *gin.Context) {
 			currentUser := ctx.GetString("current_user")
 			var document []utils.Document
-			err := db.DB.Model(utils.Document{}).Where("user_id = ? OR access @> ?", currentUser, fmt.Sprintf(`["%s"]`, currentUser)).Find(&document).Error
+			err := db.DB.Model(utils.Document{}).Where("user_id = ?", currentUser,).Find(&document).Error//TODO:switch this to access too
 			if err != nil {
 				if errors.Is(err, gorm.ErrRecordNotFound) {
 					ctx.JSON(http.StatusNotFound, gin.H{
