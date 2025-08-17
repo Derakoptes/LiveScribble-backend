@@ -247,7 +247,7 @@ func main() {
 		errorLogger.Error(fmt.Sprintf("error starting server: %v", err.Error()))
 		log.Fatalf("%s", fmt.Sprintf("error starting server: %v", err.Error()))
 	}
-
+	fmt.Println("Running Server at 8081")
 }
 
 func generateDocumentId() (string, error) {
