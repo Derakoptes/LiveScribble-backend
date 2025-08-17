@@ -2,6 +2,7 @@ package auth
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"os"
 	"slices"
@@ -39,6 +40,7 @@ func CORSMiddleware() gin.HandlerFunc {
 
 		if !originAllowed {
 			c.AbortWithStatus(http.StatusForbidden)
+			log.Printf("CORS: Origin '%s' not allowed", origin)
 			return
 		}
 
