@@ -84,9 +84,11 @@ func (h *Handler) Login(ctx *gin.Context) {
 		)
 		return
 	}
+
+	h.setCookie(ctx, token, 7*24*time.Hour)
 	ctx.JSON(
 		http.StatusOK,
-		gin.H{"token": token},
+		gin.H{"message": "Login successful"},
 	)
 }
 
@@ -156,11 +158,12 @@ func (h *Handler) CreateTempUser(ctx *gin.Context) {
 		return
 	}
 
+	h.setCookie(ctx, token, 24*time.Hour)
 	ctx.JSON(
 		http.StatusOK,
 		gin.H{
-			"token":  token,
-			"tempId": tempUser.ID,
+			"message": "Temp user created",
+			"tempId":  tempUser.ID,
 		},
 	)
 }
@@ -227,9 +230,11 @@ func (h *Handler) Register(ctx *gin.Context) {
 		)
 		return
 	}
+
+	h.setCookie(ctx, token, 7*24*time.Hour)
 	ctx.JSON(
 		http.StatusOK,
-		gin.H{"token": token},
+		gin.H{"message": "Registration successful"},
 	)
 }
 
@@ -255,3 +260,16 @@ func generateUserID() (string, error) {
 func generateTempID() (string, error) {
 	return utils.RandomString(6)
 }
+
+func (h *Handler) setCookie(ctx *gin.Context, token string, maxAge time.Duration) {
+	ctx.SetCookie(
+		"auth_token",          
+		token,                 
+		int(maxAge.Seconds()), 
+		"/",                   
+		"",                    
+		false,                 
+		true,                 	
+	)
+}
+//TODO:change above

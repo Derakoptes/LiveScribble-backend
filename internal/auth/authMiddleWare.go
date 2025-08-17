@@ -12,9 +12,9 @@ import (
 
 func MiddleWare(jwtKey []byte, DB *gorm.DB) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		//get the jwt key
-		tokenString := ctx.GetHeader("Authorization")
-		if tokenString == "" {
+		//get the jwt token from cookie
+		tokenString, err := ctx.Cookie("auth_token")
+		if err != nil || tokenString == "" {
 			ctx.JSON(http.StatusUnauthorized, gin.H{
 				"message": "Authorization token is missing",
 			})
