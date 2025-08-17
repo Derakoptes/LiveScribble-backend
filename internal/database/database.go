@@ -29,9 +29,10 @@ func (dbm *Manager) Connect() error {
 	if err != nil {
 		return err
 	}
+
 	err = db.AutoMigrate(utils.User{}, utils.Document{})
 	if err != nil {
-		return err
+		fmt.Printf("%s", err.Error())
 	}
 	dbm.DB = db
 	return nil
