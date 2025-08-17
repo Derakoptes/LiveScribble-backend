@@ -132,7 +132,7 @@ func (h *Handler) CreateTempUser(ctx *gin.Context) {
 
 	tempUser := utils.User{
 		ID:        tempUserID,
-		Email:     "", // Empty email for temp users
+		Email:     tempUserID, // Just set this to avoid unique email constraint
 		Password:  string(hashedPassword),
 		DeletedAt: deletedAt,
 	}
