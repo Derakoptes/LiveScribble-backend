@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -86,7 +87,16 @@ func main() {
 	}
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
-	r.Use(auth.CORSMiddleware())
+	
+	var allowedOrigins []string
+	originsJSON := os.Getenv("ALLOWED_ORIGINS")
+	if originsJSON != "" {
+		if err := json.Unmarshal([]byte(originsJSON), &allowedOrigins); err != nil {
+			errorLogger.Error("allowed origins not set for cors")
+			allowedOrigins = []string{}
+		}
+	}
+	r.Use(auth.CORSMiddleware(allowedOrigins))
 	authHandler := auth.NewHandler(db.DB, []byte(jwt), errorLogger)
 
 	// Initialize room manager
@@ -178,7 +188,7 @@ func main() {
 			currentUser := ctx.GetString("current_user")
 			document_id := ctx.PostForm("document_id")
 
-			err := db.DB.Where("id = ? AND user_id",&document_id, &currentUser).Delete(&utils.Document{}).Error
+			err := db.DB.Where("id = ? AND user_id", &document_id, &currentUser).Delete(&utils.Document{}).Error
 			if err != nil {
 				if errors.Is(err, gorm.ErrRecordNotFound) {
 					ctx.JSON(http.StatusOK, gin.H{

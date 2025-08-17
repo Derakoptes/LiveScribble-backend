@@ -1,56 +1,46 @@
 package auth
 
 import (
-	"encoding/json"
-	"log"
-	"net/http"
+
 	"os"
-	"slices"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 )
 
-func CORSMiddleware() gin.HandlerFunc {
-	// Check if all origins should be allowed
-	allowAllOrigins := strings.ToLower(os.Getenv("ALLOW_ALL_ORIGINS")) == "true"
-
-	// Parse allowed origins from environment variable
-	var allowedOrigins []string //Should be set in json
-	originsEnv := os.Getenv("ALLOWED_ORIGINS")
-	if originsEnv != "" {
-		if err := json.Unmarshal([]byte(originsEnv), &allowedOrigins); err != nil {
-			allowedOrigins = []string{} 
-		}
-	}
-
+func CORSMiddleware(allowedOrigins []string ) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		origin := c.Request.Header.Get("Origin")
+		allowed := false
 
-		var originAllowed bool
-		if allowAllOrigins {
-			c.Header("Access-Control-Allow-Origin", origin)
-			originAllowed = true
-		} else if len(allowedOrigins) > 0 && slices.Contains(allowedOrigins, origin) {
-			c.Header("Access-Control-Allow-Origin", origin)
-			originAllowed = true
-		} else if len(allowedOrigins) == 0 && origin == "" {
-			originAllowed = true
+		// Check if origin is empty (same-origin request)
+		if origin == ""  || os.Getenv("ALLOW_ALL_ORIGINS")=="true" {
+			allowed = true
+		} else {
+			// Check against allowed origins list
+			for _, allowedOrigin := range allowedOrigins {
+				if origin == allowedOrigin {
+					allowed = true
+					break
+				}
+			}
 		}
 
-		if !originAllowed {
-			c.AbortWithStatus(http.StatusForbidden)
-			log.Printf("CORS: Origin '%s' not allowed", origin)
+		if !allowed {
+			c.AbortWithStatus(403)
 			return
 		}
 
-		c.Header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, Upgrade, Connection, Sec-WebSocket-Key, Sec-WebSocket-Version, Sec-WebSocket-Protocol")
-		c.Header("Access-Control-Allow-Credentials", "true")
+		if origin != "" {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+			c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+			c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With, Upgrade, Connection, Sec-WebSocket-Key, Sec-WebSocket-Version, Sec-WebSocket-Protocol")
+			c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
+			c.Writer.Header().Set("Access-Control-Expose-Headers", "Content-Length")
+			c.Writer.Header().Set("Access-Control-Max-Age", "86400") // 24 hours
+		}
 
-		// Handle preflight requests
 		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(http.StatusOK)
+			c.AbortWithStatus(204)
 			return
 		}
 
