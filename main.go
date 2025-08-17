@@ -118,7 +118,7 @@ func main() {
 			currentUser := ctx.GetString("current_user")
 			var document utils.Document
 			err := db.DB.Model(utils.Document{}).Where("id = ?", requestedDocId).First(&document).Error
-			if err != nil || (document.UserID != currentUser && !containsKeyword(document.Access, currentUser)) {
+			if err != nil || (document.UserID != currentUser && strings.Contains(document.Access,currentUser)) {
 				if errors.Is(err, gorm.ErrRecordNotFound) {
 					ctx.JSON(http.StatusNotFound, gin.H{
 						"message": "document not found",
@@ -169,7 +169,7 @@ func main() {
 				ID:      new_document_id,
 				UserID:  currentUser,
 				Content: "",
-				Access:  []string{},
+				Access:  "[]",
 			}
 
 			err = db.DB.Create(&document).Error
@@ -218,7 +218,7 @@ func main() {
 			// Verify user has access to the document
 			var document utils.Document
 			err := db.DB.Model(utils.Document{}).Where("id = ?", docId).First(&document).Error
-			if err != nil || (document.UserID != currentUser && !containsKeyword(document.Access, currentUser)) {
+			if err != nil || (document.UserID != currentUser && strings.Contains(document.Access,currentUser)) {
 				if errors.Is(err, gorm.ErrRecordNotFound) {
 					ctx.JSON(http.StatusNotFound, gin.H{
 						"message": "document not found",
